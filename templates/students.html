@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Students{% endblock %}
+{% block breadcrumb %}Students{% endblock %}
+{% block page_class %}students-page{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div class="heading-copy"><p class="eyebrow">STUDENT DIRECTORY</p><h1>Students</h1><p class="page-description">Manage student profiles and academic details.</p></div>
+    <button class="button button-primary" type="button" data-open-dialog="add-student-dialog"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add student</button>
+  </div>
+
+  <section class="panel directory-panel">
+    <div class="panel-heading">
+      <div class="section-title"><p class="eyebrow">ENROLLMENT</p><h2>All students <span class="count-badge">{{ students|length }}</span></h2><p class="section-description">Student profiles and current attendance totals.</p></div>
+      <div class="table-tools">
+        <label class="search-control"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><input type="search" data-table-search="students-table" placeholder="Search students" aria-label="Search students"></label>
+        <label class="filter-control"><span class="sr-only">Filter by grade</span><select data-table-filter="students-table" data-filter-field="grade" aria-label="Filter by grade"><option value="">All grades</option>{% for grade in students|map(attribute='grade')|unique|sort %}<option value="{{ grade|lower }}">{{ grade }}</option>{% endfor %}</select></label>
+      </div>
+    </div>
+    {% if students %}
+      <div class="table-wrap">
+        <table class="management-table" id="students-table">
+          <thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>GRADE</th><th>ATTENDANCE</th><th class="actions-heading">ACTIONS</th></tr></thead>
+          <tbody>
+            {% for student in students %}
+              <tr data-search="{{ (student.name ~ ' ' ~ student.student_id ~ ' ' ~ student.grade)|lower }}" data-grade="{{ student.grade|lower }}">
+                <td><div class="person-cell"><span class="avatar">{{ student.name[:1]|upper }}</span><span class="person-name">{{ student.name }}</span></div></td>
+                <td>{{ student.student_id }}</td>
+                <td><span class="grade-badge">{{ student.grade }}</span></td>
+                <td><span class="attendance-count">{{ student.attendance|length }}</span><span class="table-muted"> entries</span></td>
+                <td><div class="row-actions">
+                  <a class="button button-small button-secondary" href="{{ url_for('edit_student', student_id=student.student_id) }}">Edit</a>
+                  <form method="post" action="{{ url_for('delete_student', student_id=student.student_id) }}" data-confirm="Delete this student and all their attendance records?"><button class="button button-small button-danger" type="submit">Delete</button></form>
+                </div></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="no-results" hidden><tr><td colspan="5"><span class="no-results-message">No students match your search.</span></td></tr></tfoot>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-illustration empty-icon-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20v-1.6a5.5 5.5 0 0 1 11 0V20zM17 8h4m-2-2v4"/></svg></span>
+        <h3>No students added</h3><p>Add a student to start building your enrollment list.</p>
+        <button class="button button-secondary" type="button" data-open-dialog="add-student-dialog">Add your first student <svg class="inline-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+      </div>
+    {% endif %}
+  </section>
+
+  {% set grade_groups = students|groupby('grade') %}
+  <section class="analytics-section" aria-labelledby="student-analytics-title">
+    <header class="analytics-heading">
+      <div>
+        <p class="eyebrow">ACADEMIC INSIGHTS</p>
+        <h2 id="student-analytics-title">Student Analytics</h2>
+        <p>Enrollment visualized from the grade and attendance details in student records.</p>
+      </div>
+      <span class="analytics-record-count">{{ students|length }} student records</span>
+    </header>
+    <div class="analytics-grid">
+      <article class="panel analytics-card" aria-labelledby="grade-distribution-title">
+        <div class="chart-heading">
+          <div><h3 id="grade-distribution-title">Enrollment by grade</h3><p>Current student count in each recorded grade.</p></div>
+          <span class="chart-total"><strong>{{ students|length }}</strong><span>Students</span></span>
+        </div>
+        {% if grade_groups %}
+          <div class="grade-bar-chart" role="list" aria-label="Students by grade">
+            {% for grade, grade_students in grade_groups %}
+              {% set share = ((grade_students|length / students|length) * 100)|round(1) %}
+              <div class="grade-bar-row" role="listitem" aria-label="Grade {{ grade }}: {{ grade_students|length }} students">
+                <span class="grade-bar-label">{{ grade }}</span>
+                <span class="grade-bar-track"><span class="grade-bar-fill chart-color-{{ loop.index0 % 6 }}" style="width: {{ share }}%"></span></span>
+                <strong class="grade-bar-count">{{ grade_students|length }}</strong>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="analytics-empty">Grade distribution will appear when student profiles are added.</div>
+        {% endif %}
+        <p class="chart-footnote">Course and department fields are not stored; grade is the available academic grouping.</p>
+      </article>
+
+      <article class="panel analytics-card" aria-labelledby="student-mix-title">
+        <div class="chart-heading">
+          <div><h3 id="student-mix-title">Student distribution</h3><p>Share of students across recorded grades.</p></div>
+          <span class="chart-overline">GRADE MIX</span>
+        </div>
+        {% if grade_groups %}
+          {% set donut_offset = namespace(value=0) %}
+          <div class="donut-layout">
+            <div class="donut-visual">
+              <svg class="analytics-donut" viewBox="0 0 42 42" role="img" aria-label="Student distribution by grade">
+                <circle class="donut-track" cx="21" cy="21" r="15.915" pathLength="100"></circle>
+                {% for grade, grade_students in grade_groups %}
+                  {% set share = ((grade_students|length / students|length) * 100)|round(2) %}
+                  <circle class="donut-segment chart-color-{{ loop.index0 % 6 }}" cx="21" cy="21" r="15.915" pathLength="100" stroke-dasharray="{{ share }} {{ 100 - share }}" stroke-dashoffset="{{ 0 - donut_offset.value }}"></circle>
+                  {% set donut_offset.value = donut_offset.value + share %}
+                {% endfor %}
+              </svg>
+              <div class="donut-center"><strong>{{ students|length }}</strong><span>Students</span></div>
+            </div>
+            <ul class="chart-legend">
+              {% for grade, grade_students in grade_groups %}
+                <li><span class="legend-label"><span class="legend-dot chart-color-{{ loop.index0 % 6 }}"></span>Grade {{ grade }}</span><strong>{{ grade_students|length }}</strong></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% else %}
+          <div class="analytics-empty">A student distribution will appear when grade records are available.</div>
+        {% endif %}
+      </article>
+    </div>
+  </section>
+
+  <dialog class="profile-dialog" id="add-student-dialog" aria-labelledby="add-student-title" {% if request.method == 'POST' %}data-reopen{% endif %}>
+    <div class="profile-dialog-header">
+      <div class="form-panel-title"><span class="form-panel-icon icon-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20v-1.6a5.5 5.5 0 0 1 11 0V20zM17 8h4m-2-2v4"/></svg></span><span><p class="eyebrow">STUDENT PROFILE</p><h2 id="add-student-title">Create Student Profile</h2><p class="section-description">Add the student's campus ID, name, and current grade.</p></span></div>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Close add student form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </div>
+    <form class="form-grid profile-dialog-form" method="post" action="{{ url_for('students') }}">
+      <label>Student ID<input name="student_id" maxlength="40" placeholder="S101" value="{{ request.form.get('student_id', '') }}" required><span class="field-hint">Use a unique student identifier.</span></label>
+      <label>Full name<input name="name" maxlength="100" placeholder="Alex Morgan" value="{{ request.form.get('name', '') }}" required><span class="field-hint">Enter the student's full name.</span></label>
+      <label>Grade<input name="grade" maxlength="30" placeholder="10 or A" value="{{ request.form.get('grade', '') }}" required><span class="field-hint">Add the current grade or class.</span></label>
+      <div class="profile-dialog-footer"><button class="button button-secondary" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add Student</button></div>
+    </form>
+  </dialog>
+{% endblock %}

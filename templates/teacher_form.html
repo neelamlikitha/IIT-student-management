@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Edit teacher{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('teachers') }}">Teachers</a> / Edit{% endblock %}
+{% block content %}
+  <div class="page-heading"><div><p class="eyebrow">TEACHER PROFILE</p><h1>Edit teacher</h1><p class="page-description">Update the teacher name in the directory.</p></div><a class="button button-secondary" href="{{ url_for('teachers') }}"><svg class="inline-arrow arrow-back" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6 6-6-6 6-6"/></svg>Back to teachers</a></div>
+  <section class="panel form-panel">
+    <form class="form-grid form-grid-two" method="post">
+      <label>Teacher ID<input value="{{ teacher.teacher_id }}" readonly></label>
+      <label>Full name<input name="name" maxlength="100" value="{{ teacher.name }}" required></label>
+      <div class="form-actions"><button class="button button-primary" type="submit">Save changes</button></div>
+    </form>
+  </section>
+{% endblock %}

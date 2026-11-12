@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Edit attendance{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('attendance') }}">Attendance</a> / Edit{% endblock %}
+{% block content %}
+  <div class="page-heading"><div><p class="eyebrow">ATTENDANCE RECORD</p><h1>Edit attendance</h1><p class="page-description">Update the record for {{ student.name }}.</p></div><a class="button button-secondary" href="{{ url_for('attendance') }}"><svg class="inline-arrow arrow-back" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6 6-6-6 6-6"/></svg>Back to attendance</a></div>
+  <section class="panel form-panel">
+    <form class="form-grid" method="post">
+      <label>Student<input value="{{ student.name }} ({{ student.student_id }})" readonly></label>
+      <label>Date<input type="date" name="date" value="{{ attendance_date }}" required></label>
+      <label>Status<select name="status" required><option value="Present" {% if status == 'Present' %}selected{% endif %}>Present</option><option value="Absent" {% if status == 'Absent' %}selected{% endif %}>Absent</option></select></label>
+      <div class="form-actions"><button class="button button-primary" type="submit">Save changes</button></div>
+    </form>
+  </section>
+{% endblock %}

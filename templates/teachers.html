@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Teachers{% endblock %}
+{% block breadcrumb %}Teachers{% endblock %}
+{% block page_class %}teachers-page{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div class="heading-copy"><p class="eyebrow">FACULTY</p><h1>Teachers</h1><p class="page-description">Manage your teacher directory and contact details.</p></div>
+    <button class="button button-primary" type="button" data-open-dialog="add-teacher-dialog"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add teacher</button>
+  </div>
+
+  <section class="panel directory-panel">
+    <div class="panel-heading">
+      <div class="section-title"><p class="eyebrow">FACULTY DIRECTORY</p><h2>All teachers <span class="count-badge">{{ teachers|length }}</span></h2><p class="section-description">Faculty profiles and directory details.</p></div>
+      <label class="search-control"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><input type="search" data-table-search="teachers-table" placeholder="Search teachers" aria-label="Search teachers"></label>
+    </div>
+    {% if teachers %}
+      <div class="table-wrap">
+        <table class="management-table" id="teachers-table">
+          <thead><tr><th>TEACHER</th><th>TEACHER ID</th><th class="actions-heading">ACTIONS</th></tr></thead>
+          <tbody>
+            {% for teacher in teachers %}
+              <tr data-search="{{ (teacher.name ~ ' ' ~ teacher.teacher_id)|lower }}">
+                <td><div class="person-cell"><span class="avatar avatar-purple">{{ teacher.name[:1]|upper }}</span><span class="person-name">{{ teacher.name }}</span></div></td>
+                <td>{{ teacher.teacher_id }}</td>
+                <td><div class="row-actions">
+                  <a class="button button-small button-secondary" href="{{ url_for('edit_teacher', teacher_id=teacher.teacher_id) }}">Edit</a>
+                  <form method="post" action="{{ url_for('delete_teacher', teacher_id=teacher.teacher_id) }}" data-confirm="Delete this teacher?"><button class="button button-small button-danger" type="submit">Delete</button></form>
+                </div></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="no-results" hidden><tr><td colspan="3"><span class="no-results-message">No teachers match your search.</span></td></tr></tfoot>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-illustration empty-icon-purple" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2"/><circle cx="12" cy="9" r="2.4"/><path d="M8 16.8a4.2 4.2 0 0 1 8 0"/></svg></span>
+        <h3>No teachers added</h3><p>Add a teacher to start building your faculty directory.</p>
+        <button class="button button-secondary" type="button" data-open-dialog="add-teacher-dialog">Add your first teacher <svg class="inline-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+      </div>
+    {% endif %}
+  </section>
+
+  {% set initial_groups = teachers|groupby('name.0') %}
+  {% set complete_profiles = namespace(value=0) %}
+  {% for teacher in teachers %}
+    {% if teacher.teacher_id|trim and teacher.name|trim %}
+      {% set complete_profiles.value = complete_profiles.value + 1 %}
+    {% endif %}
+  {% endfor %}
+  {% set incomplete_profiles = teachers|length - complete_profiles.value %}
+  {% set profile_coverage = ((complete_profiles.value / teachers|length) * 100)|round|int if teachers else 0 %}
+  <section class="analytics-section" aria-labelledby="teacher-analytics-title">
+    <header class="analytics-heading">
+      <div>
+        <p class="eyebrow">FACULTY INSIGHTS</p>
+        <h2 id="teacher-analytics-title">Faculty Analytics</h2>
+        <p>Directory patterns and profile coverage from current teacher records.</p>
+      </div>
+      <span class="analytics-record-count">{{ teachers|length }} faculty records</span>
+    </header>
+    <div class="department-data-note" role="note">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V5.5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1V20M2.5 20h19M8 8h2m4 0h2M8 12h2m4 0h2M10 20v-4h4v4"/></svg>
+      <span><strong>Department distribution unavailable</strong>Teacher records currently store a name and ID, not a department. No department chart is shown until that data exists.</span>
+    </div>
+    <div class="analytics-grid">
+      <article class="panel analytics-card" aria-labelledby="faculty-initial-title">
+        <div class="chart-heading">
+          <div><h3 id="faculty-initial-title">Faculty by name initial</h3><p>An alphabetical view of the current directory.</p></div>
+          <span class="chart-total"><strong>{{ teachers|length }}</strong><span>Teachers</span></span>
+        </div>
+        {% if initial_groups %}
+          <div class="grade-bar-chart" role="list" aria-label="Faculty count by first name initial">
+            {% for initial, initial_teachers in initial_groups %}
+              {% set share = ((initial_teachers|length / teachers|length) * 100)|round(1) %}
+              <div class="grade-bar-row" role="listitem" aria-label="{{ initial }}: {{ initial_teachers|length }} teachers">
+                <span class="grade-bar-label">{{ initial|upper }}</span>
+                <span class="grade-bar-track"><span class="grade-bar-fill chart-color-{{ loop.index0 % 6 }}" style="width: {{ share }}%"></span></span>
+                <strong class="grade-bar-count">{{ initial_teachers|length }}</strong>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="analytics-empty">Faculty distribution will appear when teacher profiles are added.</div>
+        {% endif %}
+        <p class="chart-footnote">Each bar is calculated from stored teacher names; no department values are inferred.</p>
+      </article>
+
+      <article class="panel analytics-card" aria-labelledby="faculty-coverage-title">
+        <div class="chart-heading">
+          <div><h3 id="faculty-coverage-title">Profile field coverage</h3><p>Teacher records with both a name and ID.</p></div>
+          <span class="chart-overline">DATA QUALITY</span>
+        </div>
+        {% if teachers %}
+          <div class="donut-layout">
+            <div class="donut-visual">
+              <svg class="analytics-donut" viewBox="0 0 42 42" role="img" aria-label="{{ profile_coverage }} percent of teacher profiles have both a name and ID">
+                <circle class="donut-track" cx="21" cy="21" r="15.915" pathLength="100"></circle>
+                {% if complete_profiles.value %}
+                  <circle class="donut-segment chart-color-green" cx="21" cy="21" r="15.915" pathLength="100" stroke-dasharray="{{ profile_coverage }} {{ 100 - profile_coverage }}" stroke-dashoffset="0"></circle>
+                {% endif %}
+                {% if incomplete_profiles %}
+                  <circle class="donut-segment chart-color-muted" cx="21" cy="21" r="15.915" pathLength="100" stroke-dasharray="{{ 100 - profile_coverage }} {{ profile_coverage }}" stroke-dashoffset="{{ 0 - profile_coverage }}"></circle>
+                {% endif %}
+              </svg>
+              <div class="donut-center"><strong>{{ profile_coverage }}%</strong><span>Complete</span></div>
+            </div>
+            <ul class="chart-legend">
+              <li><span class="legend-label"><span class="legend-dot chart-color-green"></span>Name and ID</span><strong>{{ complete_profiles.value }}</strong></li>
+              <li><span class="legend-label"><span class="legend-dot chart-color-muted"></span>Needs attention</span><strong>{{ incomplete_profiles }}</strong></li>
+            </ul>
+          </div>
+        {% else %}
+          <div class="analytics-empty">Profile coverage will appear when teacher records are added.</div>
+        {% endif %}
+      </article>
+    </div>
+  </section>
+
+  <dialog class="profile-dialog" id="add-teacher-dialog" aria-labelledby="add-teacher-title" {% if request.method == 'POST' %}data-reopen{% endif %}>
+    <div class="profile-dialog-header">
+      <div class="form-panel-title"><span class="form-panel-icon icon-purple" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2"/><circle cx="12" cy="9" r="2.4"/><path d="M8 16.8a4.2 4.2 0 0 1 8 0"/></svg></span><span><p class="eyebrow">FACULTY PROFILE</p><h2 id="add-teacher-title">Create Faculty Profile</h2><p class="section-description">Add the teacher's name and campus identifier.</p></span></div>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Close add teacher form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </div>
+    <form class="form-grid profile-dialog-form" method="post" action="{{ url_for('teachers') }}">
+      <label>Teacher ID<input name="teacher_id" maxlength="40" placeholder="T101" value="{{ request.form.get('teacher_id', '') }}" required><span class="field-hint">Use a unique teacher identifier.</span></label>
+      <label>Full name<input name="name" maxlength="100" placeholder="Taylor Smith" value="{{ request.form.get('name', '') }}" required><span class="field-hint">Enter the teacher's full name.</span></label>
+      <div class="profile-dialog-footer"><button class="button button-secondary" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add Teacher</button></div>
+    </form>
+  </dialog>
+{% endblock %}

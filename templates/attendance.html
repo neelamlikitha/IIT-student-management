@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block breadcrumb %}Attendance{% endblock %}
+{% block page_class %}attendance-page{% endblock %}
+{% block content %}
+  {% set attendance_counts = namespace(present=0, absent=0) %}
+  {% for record in records %}
+    {% if record.status == 'Present' %}{% set attendance_counts.present = attendance_counts.present + 1 %}{% endif %}
+    {% if record.status == 'Absent' %}{% set attendance_counts.absent = attendance_counts.absent + 1 %}{% endif %}
+  {% endfor %}
+  <div class="page-heading">
+    <div class="heading-copy"><p class="eyebrow">DAILY TRACKING</p><h1>Attendance</h1><p class="page-description">Record and review student attendance by date.</p></div>
+  </div>
+
+  <section class="attendance-summary" aria-label="Attendance summary">
+    <article class="summary-card summary-present"><span class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7"/></svg></span><span class="summary-copy"><span>Present</span><strong>{{ attendance_counts.present }}</strong></span></article>
+    <article class="summary-card summary-absent"><span class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></span><span class="summary-copy"><span>Absent</span><strong>{{ attendance_counts.absent }}</strong></span></article>
+    <article class="summary-card summary-total"><span class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5h16M4 12h16M4 18.5h16"/></svg></span><span class="summary-copy"><span>Total records</span><strong>{{ records|length }}</strong></span></article>
+  </section>
+
+  <section class="panel form-panel attendance-entry">
+    <div class="panel-heading">
+      <div class="form-panel-title"><span class="form-panel-icon icon-green" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17m-12 4 2.2 2.2 4.6-4.8"/></svg></span><span><p class="eyebrow">NEW ENTRY</p><h2>Record attendance</h2><p class="section-description">Select a student and record their status for a date.</p></span></div>
+    </div>
+    {% if students %}
+      <form class="form-grid attendance-form" method="post" action="{{ url_for('attendance') }}">
+        <label>Student<select name="student_id" required><option value="">Select a student</option>{% for student in students %}<option value="{{ student.student_id }}">{{ student.name }} ({{ student.student_id }})</option>{% endfor %}</select></label>
+        <label>Date<input type="date" name="date" value="{{ today }}" required></label>
+        <label>Status<select name="status" required><option value="">Select status</option><option>Present</option><option>Absent</option></select></label>
+        <div class="form-actions attendance-submit"><button class="button button-primary" type="submit"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>Save attendance</button></div>
+      </form>
+    {% else %}
+      <div class="inline-notice"><svg class="notice-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>Add a student before recording attendance. <a class="text-link" href="{{ url_for('students') }}">Go to Students <svg class="inline-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a></span></div>
+    {% endif %}
+  </section>
+
+  <section class="panel history-panel">
+    <div class="panel-heading">
+      <div class="section-title"><p class="eyebrow">RECORDS</p><h2>Attendance history <span class="count-badge">{{ records|length }}</span></h2><p class="section-description">Review and manage daily student attendance.</p></div>
+      <div class="table-tools">
+        <label class="search-control"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><input type="search" data-table-search="attendance-table" placeholder="Search attendance" aria-label="Search attendance"></label>
+        <label class="filter-control"><span class="sr-only">Filter by status</span><select data-table-filter="attendance-table" data-filter-field="status" aria-label="Filter attendance by status"><option value="">All statuses</option><option value="present">Present</option><option value="absent">Absent</option></select></label>
+        <label class="date-filter"><span class="sr-only">Filter from date</span><input type="date" data-date-from="attendance-table" aria-label="Filter attendance from date"></label>
+        <label class="date-filter"><span class="sr-only">Filter through date</span><input type="date" data-date-to="attendance-table" aria-label="Filter attendance through date"></label>
+      </div>
+    </div>
+    {% if records %}
+      <div class="table-wrap">
+        <table class="management-table" id="attendance-table">
+          <thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>DATE</th><th>STATUS</th><th class="actions-heading">ACTIONS</th></tr></thead>
+          <tbody>
+            {% for record in records|sort(attribute='date', reverse=true) %}
+              <tr data-search="{{ (record.student_name ~ ' ' ~ record.student_id ~ ' ' ~ record.status ~ ' ' ~ record.date)|lower }}" data-status="{{ record.status|lower }}" data-date="{{ record.date }}">
+                <td><div class="person-cell"><span class="avatar">{{ record.student_name[:1]|upper }}</span><span class="person-name">{{ record.student_name }}</span></div></td>
+                <td>{{ record.student_id }}</td><td>{{ record.date }}</td>
+                <td><span class="status-pill status-{{ record.status|lower }}">{{ record.status }}</span></td>
+                <td><div class="row-actions">
+                  <a class="button button-small button-secondary" href="{{ url_for('edit_attendance', student_id=record.student_id, attendance_date=record.date) }}">Edit</a>
+                  <form method="post" action="{{ url_for('delete_attendance', student_id=record.student_id, attendance_date=record.date) }}" data-confirm="Delete this attendance record?"><button class="button button-small button-danger" type="submit">Delete</button></form>
+                </div></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="no-results" hidden><tr><td colspan="5"><span class="no-results-message">No attendance records match these filters.</span></td></tr></tfoot>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-illustration empty-icon-green" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17m-12 4 2.2 2.2 4.6-4.8"/></svg></span>
+        <h3>No attendance records</h3><p>Attendance entries will appear here after you record them.</p>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}
